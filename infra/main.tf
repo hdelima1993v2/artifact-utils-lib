@@ -2,11 +2,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-locals {
-  valid_image = var.lambda_image_uri != "placeholder"
-}
-
-# Repositório ECR (garante que existe)
 resource "aws_ecr_repository" "artifact_lib" {
   name                 = "artifact-lib"
   image_tag_mutability = "MUTABLE"
@@ -15,7 +10,6 @@ resource "aws_ecr_repository" "artifact_lib" {
   }
 }
 
-# IAM Role para Lambda
 resource "aws_iam_role" "lambda_exec" {
   name = "${var.function_name}-role"
   assume_role_policy = jsonencode({
@@ -35,13 +29,13 @@ resource "aws_iam_role_policy_attachment" "basic_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Lambda criada SOMENTE quando a imagem é válida
 resource "aws_lambda_function" "artifact_image" {
-  count         = local.valid_image ? 1 : 0
   function_name = var.function_name
   role          = aws_iam_role.lambda_exec.arn
+
   package_type  = "Image"
   image_uri     = var.lambda_image_uri
+
   memory_size   = var.memory_size
   timeout       = var.timeout
 

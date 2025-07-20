@@ -1,0 +1,67 @@
+name: Image Lambda CI
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "Dockerfile"
+      - "requirements.txt"
+      - "infra/**"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Tag da imagem (ex: 0.1.0)"
+        required: true
+        default: "0.1.0"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: sa-east-1
+      ECR_REPO_NAME: artifact-lib
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set VERSION
+        id: ver
+        run: echo "VERSION=${{ github.event.inputs.version || '0.1.0' }}" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS (Access Keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+
+      - name: Build & Push Image
+        run: |
+          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{ steps.ver.outputs.VERSION }}
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPO_NAME }} >/dev/null 2>&1 || \
+             aws ecr create-repository --repository-name ${{ env.ECR_REPO_NAME }}
+          docker build -t $IMAGE_URI .
+          docker push $IMAGE_URI
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -upgrade
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: terraform apply -auto-approve -var "lambda_image_uri=$IMAGE_URI"
+
+      - name: Outputs
+        working-directory: infra
+        run: terraform output
