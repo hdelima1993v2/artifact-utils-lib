@@ -9,7 +9,7 @@ rm -rf "$ROOT/layer_build" "$ROOT/layer.zip"
 mkdir -p "$BUILD"
 
 echo "[INFO] Copiando código..."
-cp -r "$ROOT/src/shared_lib" "$BUILD/"
+cp -r "$ROOT/src/artifact_lib" "$BUILD/"
 
 if [ -f "$ROOT/requirements.txt" ] && [ -s "$ROOT/requirements.txt" ]; then
   echo "[INFO] Instalando dependências..."
