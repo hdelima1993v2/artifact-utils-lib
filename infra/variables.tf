@@ -3,12 +3,23 @@ variable "aws_region" {
   default = "sa-east-1"
 }
 
-variable "layer_name" {
+variable "function_name" {
   type    = string
-  default = "artifact-lib-layer"
+  default = "artifact-lib-func"
 }
 
-variable "layer_description" {
-  type    = string
-  default = "Biblioteca compartilhada única (single env)"
+variable "memory_size" {
+  type    = number
+  default = 1024
+}
+
+variable "timeout" {
+  type    = number
+  default = 30
+}
+
+variable "lambda_image_uri" {
+  type        = string
+  description = "URI da imagem ECR. Use 'placeholder' antes de ter a imagem."
+  default     = "placeholder"
 }

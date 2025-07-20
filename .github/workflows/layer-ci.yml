@@ -1,55 +1,73 @@
-name: Layer CI
+name: Image Lambda CI (2-applies)
 
 on:
   push:
     branches: ["main"]
     paths:
       - "src/**"
+      - "handler.py"
+      - "Dockerfile"
       - "requirements.txt"
-      - "pyproject.toml"
       - "infra/**"
-      - "scripts/**"
-      - "Makefile"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Tag da imagem (ex: 0.1.0)"
+        required: true
+        default: "0.1.0"
 
 jobs:
-  build-publish:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     env:
       AWS_REGION: sa-east-1
+      ECR_REPO_NAME: artifact-lib
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Set VERSION
+        id: ver
+        run: |
+          echo "VERSION=${{ github.event.inputs.version || '0.1.0' }}" >> $GITHUB_OUTPUT
 
-      - name: Build Layer
-        run: make build
-
-      - name: Configure AWS (static)
+      - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_SINGLE }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-            terraform_version: 1.7.5   # ou a versão que você quiser
-            # cli_config_credentials_token: ${{ secrets.TF_CLOUD_TOKEN }}
-      - name: Terraform Plan
-        run: make plan
+          terraform_version: 1.7.5
 
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
-        run: make apply
+      - name: Terraform Init (garante backend)
+        working-directory: infra
+        run: terraform init -upgrade
+
+      - name: Terraform Apply (garante ECR/IAM - placeholder)
+        working-directory: infra
+        run: terraform apply -auto-approve -var "lambda_image_uri=placeholder"
+
+      - name: Login ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+
+      - name: Build & Push Image
+        run: |
+            IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{ steps.ver.outputs.VERSION }}
+            echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+            docker build -t $IMAGE_URI .
+            docker push $IMAGE_URI
+
+      - name: Terraform Apply (cria/atualiza Lambda com imagem)
+        working-directory: infra
+        run: terraform apply -auto-approve -var "lambda_image_uri=$IMAGE_URI"
 
       - name: Outputs
-        run: make output
+        working-directory: infra
+        run: terraform output
