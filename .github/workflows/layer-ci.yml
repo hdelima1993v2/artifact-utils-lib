@@ -39,6 +39,11 @@ jobs:
             aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
             aws-region: ${{ env.AWS_REGION }}
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+            terraform_version: 1.7.5   # ou a versão que você quiser
+            # cli_config_credentials_token: ${{ secrets.TF_CLOUD_TOKEN }}
       - name: Terraform Plan
         run: make plan
 
