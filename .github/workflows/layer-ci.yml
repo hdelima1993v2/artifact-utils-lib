@@ -1,4 +1,4 @@
-name: Image Lambda CI (2-applies)
+name: Image Lambda CI (2-applies, access keys)
 
 on:
   push:
@@ -19,12 +19,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     env:
       AWS_REGION: sa-east-1
       ECR_REPO_NAME: artifact-lib
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,11 +32,14 @@ jobs:
         run: |
           echo "VERSION=${{ github.event.inputs.version || '0.1.0' }}" >> $GITHUB_OUTPUT
 
-      - name: Configure AWS (OIDC)
+      - name: Configure AWS (Access Keys)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_SINGLE }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+          # Se tiver session token (credencial temporária), descomente:
+          # aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -59,10 +60,10 @@ jobs:
 
       - name: Build & Push Image
         run: |
-            IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{ steps.ver.outputs.VERSION }}
-            echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
-            docker build -t $IMAGE_URI .
-            docker push $IMAGE_URI
+          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{ steps.ver.outputs.VERSION }}
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+          docker build -t $IMAGE_URI .
+          docker push $IMAGE_URI
 
       - name: Terraform Apply (cria/atualiza Lambda com imagem)
         working-directory: infra

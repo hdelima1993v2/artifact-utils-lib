@@ -1,6 +1,6 @@
 from datetime import datetime
 import awswrangler as wr
-import pandas as pd
+import pandas as pd 
 import os
 
 def ingest_expenses_sor(df: pd.DataFrame, user: str) -> dict:
