@@ -1,0 +1,12 @@
+[project]
+name = "artifact-lib"
+version = "0.1.0"
+description = "Biblioteca compartilhada para Lambdas"
+authors = [{name="Hernandes de Lima", email="hernandesls1993@gmail.com"}]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

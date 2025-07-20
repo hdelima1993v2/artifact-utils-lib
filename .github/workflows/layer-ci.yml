@@ -1,0 +1,49 @@
+name: Layer CI
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "requirements.txt"
+      - "pyproject.toml"
+      - "infra/**"
+      - "scripts/**"
+      - "Makefile"
+  workflow_dispatch: {}
+
+jobs:
+  build-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: sa-east-1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build Layer
+        run: make build
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_SINGLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Plan
+        run: make plan
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: make apply
+
+      - name: Outputs
+        run: make output
