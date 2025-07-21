@@ -1,4 +1,4 @@
-awswrangler==3.0.1      # compatível com pandas 2.2
+awswrangler==3.4.0
 pandas==2.2.2
 numpy==2.2.0
 pyarrow==16.1.0
