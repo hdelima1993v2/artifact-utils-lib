@@ -20,6 +20,5 @@ variable "timeout" {
 
 variable "lambda_image_uri" {
   type        = string
-  description = "URI da imagem ECR. Use 'placeholder' antes de ter a imagem."
-  default     = "placeholder"
+  description = "URI completo da imagem ECR (repo:tag)"
 }
