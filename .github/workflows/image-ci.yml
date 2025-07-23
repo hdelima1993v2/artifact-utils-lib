@@ -46,9 +46,9 @@ jobs:
       # 👉 NOVA ETAPA: verifica a cobertura dos testes
       - name: Verifica cobertura dos testes
         run: |
-          pytest --cov=app --cov-report=xml app/tests
-          pytest --cov=app --cov-report=html app/tests
-          pytest --cov=app --cov-report=term app/tests
+          pytest --cov=. --cov-report=xml  ./tests
+          pytest --cov=. --cov-report=html ./tests
+          pytest --cov=. --cov-report=term ./tests
           
       # 👉 NOVA ETAPA: exibe o relatório de cobertur
       - name: Exibe relatório de cobertura
