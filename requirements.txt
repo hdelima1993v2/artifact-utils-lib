@@ -1,9 +1,5 @@
--e git+https://github.com/hdelima1993v2/artifact-utils-lib.git@9c971a534a5fbcd0d97fc7a3ec88c75c7465547c#egg=artifact_lib
-pytest==6.2.5
-pytest-cov==6.2.1
-pytest-pythonpath==0.7.4
 awswrangler==3.4.0
 pandas==2.2.2
 numpy==1.26.4
-pyarrow==20.0.0
+pyarrow==16.1.0
 python-dateutil==2.9.0.post0

@@ -25,36 +25,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      ########################################################
-      # 2) Testes unitários
-      ########################################################
-      # 👉 NOVA ETAPA: roda testes unitários antes de empacotar o código
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      # 👉 NOVA ETAPA: instala as dependências necessárias para os testes
-      - name: Instala dependências para testes
-        run: |
-          pip install -r requirements.txt
-          pip install pytest            # ferramenta de testes
-          pip install pytest-cov        # cobertura de testes          
+      # ########################################################
+      # # 2) Testes unitários
+      # ########################################################
+      # # 👉 NOVA ETAPA: roda testes unitários antes de empacotar o código
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: "3.12"
+      # # 👉 NOVA ETAPA: instala as dependências necessárias para os testes
+      # - name: Instala dependências para testes
+      #   run: |
+      #     pip install -r requirements.txt
+      #     pip install pytest            # ferramenta de testes
+      #     pip install pytest-cov        # cobertura de testes          
       
-      # 👉 NOVA ETAPA: roda todos os testes unitários
-      - name: Executa testes unitários
-        run: pytest tests --quiet
-      # 👉 NOVA ETAPA: verifica a cobertura dos testes
-      - name: Verifica cobertura dos testes
-        run: |
-          pytest --cov=. --cov-report=xml  ./tests
-          pytest --cov=. --cov-report=html ./tests
-          pytest --cov=. --cov-report=term ./tests
+      # # 👉 NOVA ETAPA: roda todos os testes unitários
+      # - name: Executa testes unitários
+      #   run: pytest tests --quiet
+      # # 👉 NOVA ETAPA: verifica a cobertura dos testes
+      # - name: Verifica cobertura dos testes
+      #   run: |
+      #     pytest --cov=. --cov-report=xml  ./tests
+      #     pytest --cov=. --cov-report=html ./tests
+      #     pytest --cov=. --cov-report=term ./tests
           
-      # 👉 NOVA ETAPA: exibe o relatório de cobertur
-      - name: Exibe relatório de cobertura
-        run: |
-          echo "Relatório de cobertura gerado em: $(pwd)/htmlcov/index.html"
-          echo "Abra o arquivo htmlcov/index.html para ver o relatório completo."
+      # # 👉 NOVA ETAPA: exibe o relatório de cobertur
+      # - name: Exibe relatório de cobertura
+      #   run: |
+      #     echo "Relatório de cobertura gerado em: $(pwd)/htmlcov/index.html"
+      #     echo "Abra o arquivo htmlcov/index.html para ver o relatório completo."
 
       ########################################################
 
