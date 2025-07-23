@@ -16,7 +16,7 @@ def test_ingest_expenses_sor(mock_dataframe):
     df['numero_versao_processamento'] = version
     user = "thorfin"
 
-    result = ingest_expenses_sor(df, user, version)
+    result = ingest_expenses_sor(df, user)
     logger.info(f'teste efetuado! Versão:{version}')
     assert result == {"linhas_gravadas": len(df)}
 
@@ -25,7 +25,7 @@ def test_except_ingest_expenses_sor(mock_dataframe):
     user = "thorfin"
     version = int(time.time())
     with pytest.raises(Exception) as error:
-        result = ingest_expenses_sor(mock_dataframe, user, version)
+        result = ingest_expenses_sor(mock_dataframe, user)
     
     assert ('[datamesh.ingest_expenses_sor] erro ao inserir dados' in
              str(error.value))

@@ -1,14 +1,13 @@
 import awswrangler as wr
 import pandas as pd 
 
-def ingest_expenses_sor(df: pd.DataFrame, user: str, version: int) -> dict:
+def ingest_expenses_sor(df: pd.DataFrame, user: str) -> dict:
     """
     Função responsável por preencher a tabela despesas_sor de acordo com o 
     banco de dados que o usuário está executando
 
     :param df: dataframe com os gastos que serão inseridos na tabela.
     :param user: usuário que está executando a aplicação.
-    :param version: versão de processamento do arquivo para salvar no bucket
     
     :return: dicionário com a quantidade de linhas inseridas na tabela.
     """
