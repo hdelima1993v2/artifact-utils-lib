@@ -1,4 +1,4 @@
-awswrangler==3.4.0
+awswrangler==3.12.1
 pandas==2.2.2
 numpy==1.26.4
 pyarrow==16.1.0
