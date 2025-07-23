@@ -1,0 +1,18 @@
+# Ignora todos os diretórios __pycache__ em qualquer nível
+__pycache__/
+
+__pytest_cache/
+
+# Ignora byte‑code do Python
+*.py[cod]
+
+# Caso existam arquivos de cache do pytest
+.pytest_cache/
+
+# (Opcional) ignora arquivos/diretórios temporários de sua IDE
+.vscode/
+.idea/
+*.coverage
+*.coveragerc
+*.ini
+

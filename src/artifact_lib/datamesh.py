@@ -1,15 +1,14 @@
-from datetime import datetime
 import awswrangler as wr
 import pandas as pd 
-import os
 
-def ingest_expenses_sor(df: pd.DataFrame, user: str) -> dict:
+def ingest_expenses_sor(df: pd.DataFrame, user: str, version: int) -> dict:
     """
     Função responsável por preencher a tabela despesas_sor de acordo com o 
     banco de dados que o usuário está executando
 
     :param df: dataframe com os gastos que serão inseridos na tabela.
     :param user: usuário que está executando a aplicação.
+    :param version: versão de processamento do arquivo para salvar no bucket
     
     :return: dicionário com a quantidade de linhas inseridas na tabela.
     """
@@ -23,8 +22,8 @@ def ingest_expenses_sor(df: pd.DataFrame, user: str) -> dict:
         # Escrever (append)
         wr.s3.to_parquet(
             df=df, 
-            path=f's3://ddd-dbsource-datamesh/{database}/{table}/',
-            dataset=False,
+            path=f's3://ddd-dbsource-datamesh/{database}/{table}',
+            dataset=True,
             database=database,
             table=table,
             mode="append"
