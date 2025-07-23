@@ -1,22 +1,17 @@
 -e git+https://github.com/hdelima1993v2/artifact-utils-lib.git@9c971a534a5fbcd0d97fc7a3ec88c75c7465547c#egg=artifact_lib
 attrs==25.3.0
-awswrangler==3.12.1
 boto3==1.39.9
 botocore==1.39.9
 coverage==7.9.2
 iniconfig==2.1.0
 jmespath==1.0.1
-numpy==2.3.1
 packaging==25.0
-pandas==2.3.1
 pluggy==1.6.0
 py==1.11.0
-pyarrow==20.0.0
 Pygments==2.19.2
 pytest==6.2.5
 pytest-cov==6.2.1
 pytest-pythonpath==0.7.4
-python-dateutil==2.9.0.post0
 pytz==2025.2
 s3transfer==0.13.1
 setuptools==80.9.0
@@ -25,3 +20,8 @@ toml==0.10.2
 typing_extensions==4.14.1
 tzdata==2025.2
 urllib3==2.5.0
+awswrangler==3.4.0
+pandas==2.2.2
+numpy==1.26.4
+pyarrow==16.1.0
+python-dateutil==2.9.0.post0
