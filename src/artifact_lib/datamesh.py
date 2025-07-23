@@ -27,7 +27,7 @@ def ingest_expenses_sor(df: pd.DataFrame, user: str, version: int) -> dict:
             database=database,
             table=table,
             mode="append"
-        )
+        ) 
 
         return {"linhas_gravadas": len(df)}
     
