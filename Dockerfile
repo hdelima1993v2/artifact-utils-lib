@@ -5,7 +5,8 @@ FROM public.ecr.aws/lambda/python:3.11
 # 1. Dependências – TODAS têm wheel manylinux2014 para Python 3.11
 # -----------------------------------------------------------------
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+RUN yum -y update && yum -y install git && yum clean all && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir -r requirements.txt
 
 # -----------------------------------------------------------------
