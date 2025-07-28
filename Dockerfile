@@ -1,14 +1,34 @@
-# ========================  Dockerfile  =========================
+# --------------------------------------------------
+# Imagem base oficial da AWS Lambda (Python 3.11)
+# --------------------------------------------------
 FROM public.ecr.aws/lambda/python:3.11
 
-# -----------------------------------------------------------------
-# 1. Dependências – TODAS têm wheel manylinux2014 para Python 3.11
-# -----------------------------------------------------------------
-COPY requirements.txt .
-RUN yum -y update && yum -y install git && yum clean all && \
-    pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir -r requirements.txt
+# --------------------------------------------------
+# 1. Atualiza pacotes e instala:
+#    • git                 → para pip clonar deps via HTTPS
+#    • Development Tools   → gcc, g++, make, etc. (compilar C/C++)
+#    • cmake / ninja       → compilar libs que exigem esses builders
+#    • openssl‑devel, bzip2‑devel, libffi‑devel → headers comuns
+# --------------------------------------------------
+RUN yum -y update \
+ && yum -y groupinstall "Development Tools" \
+ && yum -y install git cmake ninja-build openssl-devel bzip2-devel libffi-devel \
+ && yum clean all
 
+# --------------------------------------------------
+# 2. Copia apenas o requirements.txt
+#    (mantém o cache do Docker leve)
+# --------------------------------------------------
+COPY requirements.txt .
+
+# --------------------------------------------------
+# 3. Instala dependências
+#    • --no-cache-dir → evita cache local do pip
+#    • --upgrade pip/setuptools/wheel
+# --------------------------------------------------
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+ && pip install --no-cache-dir -r requirements.txt
+ 
 # -----------------------------------------------------------------
 # 2. Copia APENAS a sua biblioteca (estrutura preservada)
 # -----------------------------------------------------------------
