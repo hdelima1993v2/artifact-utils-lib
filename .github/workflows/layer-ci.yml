@@ -45,7 +45,7 @@ jobs:
 
       - name: Terraform Apply (publica layer)
         working-directory: infra/layer
-        run: terraform apply -auto-approve -var 'compatible_runtimes=["python3.12"]'
+        run: terraform apply -auto-approve
 
       - name: Outputs
         working-directory: infra/layer

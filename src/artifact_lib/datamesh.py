@@ -15,7 +15,7 @@ def ingest_expenses_sor(df: pd.DataFrame, user: str) -> dict:
         table = 'despesas_sor'
         for field in df.columns:
             df[field] = df[field].astype(str).replace({'nan': None, 'NaT':None, 
-                'None': None})
+                'None': None}) 
 
         # Escrever (append)
         wr.s3.to_parquet(
