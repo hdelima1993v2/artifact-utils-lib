@@ -7,8 +7,7 @@ def ingest_expenses_sor(df: pd.DataFrame, user: str) -> dict:
     banco de dados que o usuário está executando
 
     :param df: dataframe com os gastos que serão inseridos na tabela.
-    :param user: usuário que está executando a aplicação.
-    
+    :param user: usuário que está executando a aplicação.    
     :return: dicionário com a quantidade de linhas inseridas na tabela.
     """
     try:

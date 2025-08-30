@@ -29,7 +29,7 @@ jobs:
       - name: Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Build layer.zip
         run: bash scripts/build_layer.sh
@@ -45,7 +45,7 @@ jobs:
 
       - name: Terraform Apply (publica layer)
         working-directory: infra/layer
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var 'compatible_runtimes=["python3.12"]'
 
       - name: Outputs
         working-directory: infra/layer
