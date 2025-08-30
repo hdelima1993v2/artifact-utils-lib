@@ -32,8 +32,12 @@ jobs:
           python-version: "3.12"
 
       - name: Build layer.zip
-        working-directory: infra/layer
-        run: ../scripts/build_layer.sh
+        run: bash scripts/build_layer.sh
+
+      - name: Move zip para onde o Terraform espera
+        run: |
+          mkdir -p infra/layer/dist
+          cp dist/layer.zip infra/layer/dist/layer.zip
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
