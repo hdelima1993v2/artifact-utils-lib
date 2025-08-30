@@ -69,32 +69,27 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login ECR
-        uses: aws-actions/amazon-ecr-login@v2
-        id: login-ecr
-
-      - name: Build & Push Image
+      - name: Login no ECR
         run: |
-          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{ steps.ver.outputs.VERSION }}
-          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
-          aws ecr describe-repositories --repository-names ${{ env.ECR_REPO_NAME }} >/dev/null 2>&1 || \
-             aws ecr create-repository --repository-name ${{ env.ECR_REPO_NAME }}
-          docker build -t $IMAGE_URI .
-          docker push $IMAGE_URI
+          aws ecr get-login-password --region $AWS_REGION \
+          | docker login --username AWS --password-stdin \
+            $(aws sts get-caller-identity --query 'Account' --output text).dkr.ecr.$AWS_REGION.amazonaws.com
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.5
+      - name: Build & Push
+        run: |
+          REPO_URI=$(aws ecr describe-repositories --repository-names artifact-fn --query 'repositories[0].repositoryUri' --output text 2>/dev/null || true)
+          if [ -z "$REPO_URI" ]; then
+            aws ecr create-repository --repository-name artifact-fn >/dev/null
+            REPO_URI=$(aws ecr describe-repositories --repository-names artifact-fn --query 'repositories[0].repositoryUri' --output text)
+          fi
+          TAG=${GITHUB_SHA::7}
+          docker build -t "$REPO_URI:$TAG" .
+          docker push "$REPO_URI:$TAG"
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
 
-      - name: Terraform Init
-        working-directory: infra
-        run: terraform init -upgrade
-
-      - name: Terraform Apply
-        working-directory: infra
-        run: terraform apply -auto-approve -var "lambda_image_uri=$IMAGE_URI"
-
-      - name: Outputs
-        working-directory: infra
-        run: terraform output
+      - name: Terraform Apply (imagem)
+        working-directory: infra/image
+        env:
+          TF_VAR_image_tag: ${{ env.IMAGE_TAG }}
+          TF_VAR_lambda_role_arn: ${{ secrets.LAMBDA_ROLE_ARN }}
+        run: terraform apply -auto-approve
