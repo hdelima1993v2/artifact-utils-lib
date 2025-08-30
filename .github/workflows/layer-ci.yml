@@ -33,7 +33,7 @@ jobs:
 
       - name: Build layer.zip
         working-directory: infra/layer
-        run: bash scripts/build_layer.sh
+        run: ../scripts/build_layer.sh
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

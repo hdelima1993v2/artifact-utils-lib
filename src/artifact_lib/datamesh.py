@@ -12,7 +12,7 @@ def ingest_expenses_sor(df: pd.DataFrame, user: str) -> dict:
     """
     try:
         database = 'db_source_expenses_' + user
-        table = 'despesas_sor' 
+        table = 'despesas_sor'
         for field in df.columns:
             df[field] = df[field].astype(str).replace({'nan': None, 'NaT':None, 
                 'None': None}) 
