@@ -12,7 +12,7 @@ variable "memory_size" {
   type    = number
   default = 1024
 }
-   
+
 variable "timeout" {
   type    = number
   default = 30

@@ -33,11 +33,11 @@ resource "aws_lambda_function" "artifact_image" {
   function_name = var.function_name
   role          = aws_iam_role.lambda_exec.arn
 
-  package_type  = "Image"
-  image_uri     = var.lambda_image_uri
+  package_type = "Image"
+  image_uri    = var.lambda_image_uri
 
-  memory_size   = var.memory_size
-  timeout       = var.timeout
+  memory_size = var.memory_size
+  timeout     = var.timeout
 
   environment {
     variables = {

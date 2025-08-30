@@ -15,4 +15,5 @@ __pytest_cache/
 *.coverage
 *.coveragerc
 *.ini
-
+.terraform/
+*/.terraform.lock.hcl*
