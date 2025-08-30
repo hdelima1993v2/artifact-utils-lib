@@ -10,7 +10,7 @@ def get_dateref_yyyymm(df: pd.DataFrame, date_column:str,
 
     :param df: DataFrame contendo a coluna de datas.
     :param date_column: Nome da coluna que contém as datas.
-    :param format_field: formato da data que o campo possuí.
+    :param format_field: formato da data que o campo possuí. 
     :param sell_type: tipo de despesa do arquivo.
     
     :return str: ano mês min/max no formato YYYYMM.
