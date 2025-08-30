@@ -32,6 +32,7 @@ jobs:
           python-version: "3.12"
 
       - name: Build layer.zip
+        working-directory: infra/layer
         run: bash scripts/build_layer.sh
 
       - name: Setup Terraform
