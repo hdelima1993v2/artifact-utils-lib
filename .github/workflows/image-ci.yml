@@ -66,4 +66,4 @@ jobs:
             -auto-approve \
             -input=false \
             -lock-timeout=5m \
-            -var="image_tag=${{ env.SHORT }}"
+            -var="image_tag=TAG"
