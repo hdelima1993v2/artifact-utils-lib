@@ -6,7 +6,9 @@ on:
     paths:
       - "src/**"
       - "scripts/build_layer.sh"
+      - "scripts/build_arrow_layer.sh"         # <— novo
       - "requirements-layer.txt"
+      - "requirements-layer-arrow.txt"         # <— novo
       - "infra/layer/**"
   workflow_dispatch: {}
 
@@ -31,13 +33,22 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build layer.zip
+      - name: Build layer.zip (CORE)
         run: bash scripts/build_layer.sh
 
-      - name: Move zip para onde o Terraform espera
+      - name: Build arrow_layer.zip (ARROW)
+        run: bash scripts/build_arrow_layer.sh
+
+      - name: Mover zips para o módulo Terraform
         run: |
           mkdir -p infra/layer/dist
-          cp layer.zip infra/layer/dist/layer.zip
+          cp layer.zip infra/layer/dist/core_layer.zip
+          cp arrow_layer.zip infra/layer/dist/arrow_layer.zip
+
+      - name: Conferir tamanhos e existência
+        run: |
+          ls -lah infra/layer/dist
+          du -sh infra/layer/dist/* || true
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -48,7 +59,7 @@ jobs:
         working-directory: infra/layer
         run: terraform init -upgrade
 
-      - name: Terraform Apply (publica layer)
+      - name: Terraform Apply (publica layers core + arrow)
         working-directory: infra/layer
         run: terraform apply -auto-approve
 
