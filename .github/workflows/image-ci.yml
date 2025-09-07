@@ -39,47 +39,56 @@ jobs:
         working-directory: infra/image
         run: terraform init -upgrade
 
+      # 1) Garante/cria o ECR. Passa placeholders para as vars
+      #    e limita o apply ao ECR para NÃO tentar criar a Lambda agora.
       - name: Terraform Apply (create/ensure ECR)
         working-directory: infra/image
-        # Se seu módulo NÃO precisa de variáveis aqui, pode ser só 'terraform apply -auto-approve'
+        env:
+          TF_IN_AUTOMATION: "true"
         run: |
-          terraform apply -auto-approve
+          terraform apply -auto-approve -input=false -lock-timeout=5m \
+            -target=aws_ecr_repository.lambda \
+            -var='image_tag=__placeholder__' \
+            -var='lambda_role_arn=__placeholder__'
 
+      # 2) Lê a URI do ECR do output do Terraform
       - name: Get ECR URI from Terraform output
-        id: tfout
+        id: tf
         working-directory: infra/image
-        run: |
-          URI=$(terraform output -raw repository_url)
-          echo "URI=$URI" | tee -a $GITHUB_ENV
-          echo "uri=$URI" >> $GITHUB_OUTPUT
+        run: echo "uri=$(terraform output -raw ecr_uri)" >> $GITHUB_OUTPUT
 
-      # --- Login no ECR ---
+
+      # 3) Login no ECR usando a URI obtida
       - name: Login no ECR
+        env:
+          ECR_URI: ${{ steps.tf.outputs.uri }}
+          AWS_REGION: ${{ env.AWS_REGION }}
         run: |
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGISTRY="$(echo "$ECR_URI" | cut -d/ -f1)"
           aws ecr get-login-password --region "$AWS_REGION" \
-            | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+            | docker login --username AWS --password-stdin "$REGISTRY"
 
-      # --- Build & Push ---
-      # DICA: se seu Dockerfile usa 'COPY app.py .' mas o arquivo está fora de infra/image,
-      # use contexto '.' (raiz) e mantenha o Dockerfile com -f infra/image/Dockerfile
+      # 4) Build & push
       - name: Build & Push da imagem
         env:
-          REPO_URI: ${{ steps.tfout.outputs.uri }}
+          REPO_URI: ${{ steps.tf.outputs.uri }}
           GIT_SHA: ${{ github.sha }}
         run: |
           SHORT=${GIT_SHA::7}
-          # Se o seu Dockerfile copia arquivos que estão fora de infra/image, use contexto '.' :
-          docker build -t "$REPO_URI:$SHORT" -f infra/image/Dockerfile .
+          # ATENÇÃO ao Dockerfile/contexto abaixo:
+          # se seu Dockerfile está na raiz, deixe como está.
+          # Se estiver em infra/image, troque para: -f infra/image/Dockerfile infra/image
+          docker build -t "$REPO_URI:$SHORT" -f Dockerfile .
           docker push "$REPO_URI:$SHORT"
           echo "TAG=$SHORT" >> $GITHUB_ENV
 
-      # --- Atualiza a infra para apontar para a nova TAG ---
-      - name: Terraform Apply (update image tag)
+
+      # 5) Agora sim, aplica a Lambda com a tag real e o role arn
+      - name: Terraform Apply (deploy lambda image)
         working-directory: infra/image
+        env:
+          TF_IN_AUTOMATION: "true"
         run: |
-          terraform apply \
-            -auto-approve \
-            -input=false \
-            -lock-timeout=5m \
-            -var="image_tag=${{ env.TAG }}"
+          terraform apply -auto-approve -input=false -lock-timeout=5m \
+            -var="image_tag=${{ env.TAG }}" \
+            -var="lambda_role_arn=${{ secrets.LAMBDA_ROLE_ARN }}"
