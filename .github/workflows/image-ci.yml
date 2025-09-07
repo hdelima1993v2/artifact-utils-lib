@@ -45,7 +45,7 @@ jobs:
           GIT_SHA: ${{ github.sha }}
         run: |
           SHORT=${GIT_SHA::7}
-          docker build -t "$REPO_URI:$SHORT" -f Dockerfile .
+          docker build -t "$REPO_URI:$SHORT" -f infra/image/Dockerfile infra/image
           docker push "$REPO_URI:$SHORT"
           echo "TAG=$SHORT" >> $GITHUB_ENV
 
