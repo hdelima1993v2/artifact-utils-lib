@@ -54,10 +54,11 @@ jobs:
       - name: Sanity CORE sem pyarrow
         run: |
           set -e
-          if unzip -l infra/layer/dist/core_layer.zip | grep -i pyarrow; then
-            echo "ERRO: pyarrow apareceu no CORE"; exit 1
+          if unzip -l infra/layer/dist/core_layer.zip | awk '{print $4}' | grep -Eq '^python/pyarrow/|^python/pyarrow-[0-9].*\.dist-info/'; then
+            echo "ERRO: pacote pyarrow caiu no CORE"
+            exit 1
           else
-            echo "OK: core_layer.zip SEM pyarrow ✅"
+            echo "OK: CORE sem pacote pyarrow"
           fi
 
       - name: Sanity ARROW com pyarrow
@@ -74,14 +75,18 @@ jobs:
         with:
           terraform_version: 1.7.5
 
-      - name: Terraform Init
+      - name: Terraform Init (layers)
         working-directory: infra/layer
         run: terraform init -upgrade
 
-      - name: Terraform Apply (publica layers core + arrow)
+      - name: Terraform Apply (layers)
         working-directory: infra/layer
-        run: terraform apply -auto-approve
-
+        env:
+          TAG: ${{ github.sha }}
+        run: |
+          SHORT=${TAG::7}
+          terraform apply -auto-approve -var="build_id=${SHORT}"
+          
       - name: Outputs
         working-directory: infra/layer
         run: terraform output

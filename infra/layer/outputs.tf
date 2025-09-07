@@ -1,9 +1,3 @@
-output "artifact_core_layer_arn" {
-  value       = aws_lambda_layer_version.artifact_lib.arn
-  description = "ARN da layer artifact-lib-core"
-}
-
-output "artifact_arrow_layer_arn" {
-  value       = aws_lambda_layer_version.artifact_lib_arrow.arn
-  description = "ARN da layer artifact-lib-arrow"
-}
+output "core_layer_arn"  { value = aws_lambda_layer_version.core.arn }
+output "arrow_layer_arn" { value = aws_lambda_layer_version.arrow.arn }
+output "layers_arns"     { value = [aws_lambda_layer_version.core.arn, aws_lambda_layer_version.arrow.arn] }

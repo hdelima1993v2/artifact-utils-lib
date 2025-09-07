@@ -5,62 +5,21 @@ on:
     branches: ["main"]
     paths:
       - "src/**"
-      - "Dockerfile"
       - "requirements.txt"
-      - "infra/**"
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Tag da imagem (ex: 0.1.0)"
-        required: true
-        default: "0.1.0"
+      - "Dockerfile"
+      - "infra/image/**"
+  workflow_dispatch: {}
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: sa-east-1
-      ECR_REPO_NAME: artifact-lib
+      REPO_NAME: artifact-fn
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # ########################################################
-      # # 2) Testes unitários
-      # ########################################################
-      # # 👉 NOVA ETAPA: roda testes unitários antes de empacotar o código
-      # - name: Set up Python
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: "3.12"
-      # # 👉 NOVA ETAPA: instala as dependências necessárias para os testes
-      # - name: Instala dependências para testes
-      #   run: |
-      #     pip install -r requirements.txt
-      #     pip install pytest            # ferramenta de testes
-      #     pip install pytest-cov        # cobertura de testes          
-      
-      # # 👉 NOVA ETAPA: roda todos os testes unitários
-      # - name: Executa testes unitários
-      #   run: pytest tests --quiet
-      # # 👉 NOVA ETAPA: verifica a cobertura dos testes
-      # - name: Verifica cobertura dos testes
-      #   run: |
-      #     pytest --cov=. --cov-report=xml  ./tests
-      #     pytest --cov=. --cov-report=html ./tests
-      #     pytest --cov=. --cov-report=term ./tests
-          
-      # # 👉 NOVA ETAPA: exibe o relatório de cobertur
-      # - name: Exibe relatório de cobertura
-      #   run: |
-      #     echo "Relatório de cobertura gerado em: $(pwd)/htmlcov/index.html"
-      #     echo "Abra o arquivo htmlcov/index.html para ver o relatório completo."
-
-      ########################################################
-
-      - name: Set VERSION
-        id: ver
-        run: echo "VERSION=${{ github.event.inputs.version || '0.1.0' }}" >> $GITHUB_OUTPUT
 
       - name: Configure AWS (Access Keys)
         uses: aws-actions/configure-aws-credentials@v4
@@ -72,27 +31,34 @@ jobs:
       - name: Login no ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION \
-          | docker login --username AWS --password-stdin \
-            $(aws sts get-caller-identity --query 'Account' --output text).dkr.ecr.$AWS_REGION.amazonaws.com
+            | docker login --username AWS --password-stdin "$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com"
 
-      - name: Build & Push (imagem)
+      - name: Descobrir URI do repositório
+        id: repo
         run: |
-          set -e
-          REPO_URI=$(aws ecr describe-repositories --repository-names artifact-fn \
-            --query 'repositories[0].repositoryUri' --output text 2>/dev/null || true)
-          if [ -z "$REPO_URI" ]; then
-            aws ecr create-repository --repository-name artifact-fn >/dev/null
-            REPO_URI=$(aws ecr describe-repositories --repository-names artifact-fn \
-              --query 'repositories[0].repositoryUri' --output text)
-          fi
-          TAG=${GITHUB_SHA::7}
-          docker build -f infra/image/Dockerfile -t "$REPO_URI:$TAG" infra/image
-          docker push "$REPO_URI:$TAG"
-          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+          URI=$(aws ecr describe-repositories --repository-names "$REPO_NAME" --query 'repositories[0].repositoryUri' --output text)
+          echo "uri=$URI" >> $GITHUB_OUTPUT
 
-      - name: Terraform Apply (imagem)
-        working-directory: infra/image
+      - name: Build & Push da imagem
         env:
-          TF_VAR_image_tag: ${{ env.IMAGE_TAG }}
-          TF_VAR_lambda_role_arn: ${{ secrets.LAMBDA_ROLE_ARN }}
-        run: terraform apply -auto-approve
+          REPO_URI: ${{ steps.repo.outputs.uri }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          SHORT=${GIT_SHA::7}
+          docker build -t "$REPO_URI:$SHORT" -f Dockerfile .
+          docker push "$REPO_URI:$SHORT"
+          echo "TAG=$SHORT" >> $GITHUB_ENV
+
+      # >>> Estes são os passos a que eu me referia <<<
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform Init (image)
+        working-directory: infra/image
+        run: terraform init -upgrade
+
+      - name: Terraform Apply (image)
+        working-directory: infra/image
+        run: terraform apply -auto-approve -var="image_tag=${{ env.TAG }}"
