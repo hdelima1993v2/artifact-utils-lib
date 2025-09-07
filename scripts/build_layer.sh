@@ -8,25 +8,21 @@ echo "[INFO] Limpando..."
 rm -rf "$ROOT/layer_build" "$ROOT/layer.zip"
 mkdir -p "$BUILD_DIR"
 
-echo "[INFO] Copiando artifact_lib..."
-cp -r "$ROOT/src/artifact_lib" "$BUILD_DIR/artifact_lib"
+echo "[INFO] Instalando deps do CORE (sem deps transitivas do wrangler)..."
+python -m pip install --upgrade pip
+# awswrangler sem deps pra NÃO puxar boto3/pyarrow
+pip install -t "$BUILD_DIR" --no-cache-dir --no-compile --only-binary=:all: --no-deps awswrangler==3.12.1
+# runtime que queremos
+pip install -t "$BUILD_DIR" --no-cache-dir --no-compile --only-binary=:all: numpy==2.1.2 pandas==2.3.1
 
-REQ="$ROOT/requirements-layer.txt"
-if [ -f "$REQ" ] && [ -s "$REQ" ]; then
-  echo "[INFO] Instalando deps leves layer..."
-  pip install --no-cache-dir -r "$REQ" -t "$BUILD_DIR"
-fi
+echo "[INFO] Copiando sua lib..."
+# sua lib fica em src/artifact_lib
+cp -R "$ROOT/src/artifact_lib" "$BUILD_DIR/"
 
-echo "[INFO] Removendo __pycache__..."
+echo "[INFO] Limpando peso inútil..."
 find "$BUILD_DIR" -type d -name "__pycache__" -exec rm -rf {} +
+find "$BUILD_DIR" -type d \( -name "*.dist-info" -o -name "*.egg-info" -o -name "tests" \) -exec rm -rf {} +
 
-echo "[INFO] Validando..."
-test -f "$BUILD_DIR/artifact_lib/__init__.py" || { echo "Faltou __init__.py"; exit 1; }
-
-echo "[INFO] Gerando zip..."
-cd "$ROOT/layer_build"
-zip -r ../layer.zip . >/dev/null
-cd "$ROOT"
-
-echo "[OK] layer.zip pronto."
-unzip -l layer.zip | head -30
+echo "[INFO] Gerando zip (CORE)..."
+( cd "$ROOT/layer_build" && zip -r ../layer.zip python >/dev/null )
+echo "[OK] layer.zip pronto (CORE)."

@@ -75,15 +75,18 @@ jobs:
           | docker login --username AWS --password-stdin \
             $(aws sts get-caller-identity --query 'Account' --output text).dkr.ecr.$AWS_REGION.amazonaws.com
 
-      - name: Build & Push
+      - name: Build & Push (imagem)
         run: |
-          REPO_URI=$(aws ecr describe-repositories --repository-names artifact-fn --query 'repositories[0].repositoryUri' --output text 2>/dev/null || true)
+          set -e
+          REPO_URI=$(aws ecr describe-repositories --repository-names artifact-fn \
+            --query 'repositories[0].repositoryUri' --output text 2>/dev/null || true)
           if [ -z "$REPO_URI" ]; then
             aws ecr create-repository --repository-name artifact-fn >/dev/null
-            REPO_URI=$(aws ecr describe-repositories --repository-names artifact-fn --query 'repositories[0].repositoryUri' --output text)
+            REPO_URI=$(aws ecr describe-repositories --repository-names artifact-fn \
+              --query 'repositories[0].repositoryUri' --output text)
           fi
           TAG=${GITHUB_SHA::7}
-          docker build -t "$REPO_URI:$TAG" .
+          docker build -f infra/image/Dockerfile -t "$REPO_URI:$TAG" infra/image
           docker push "$REPO_URI:$TAG"
           echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
 

@@ -50,6 +50,25 @@ jobs:
           ls -lah infra/layer/dist
           du -sh infra/layer/dist/* || true
 
+      # ✅ SANITY CHECKS
+      - name: Sanity CORE sem pyarrow
+        run: |
+          set -e
+          if unzip -l infra/layer/dist/core_layer.zip | grep -i pyarrow; then
+            echo "ERRO: pyarrow apareceu no CORE"; exit 1
+          else
+            echo "OK: core_layer.zip SEM pyarrow ✅"
+          fi
+
+      - name: Sanity ARROW com pyarrow
+        run: |
+          set -e
+          if unzip -l infra/layer/dist/arrow_layer.zip | grep -i pyarrow >/dev/null; then
+            echo "OK: arrow_layer.zip COM pyarrow ✅"
+          else
+            echo "ERRO: arrow_layer.zip NÃO contém pyarrow"; exit 1
+          fi
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
