@@ -21,6 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Usa SUAS credenciais (sem role_arn)
       - name: Configure AWS (Access Keys)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -28,28 +29,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login no ECR
-        run: |
-          aws ecr get-login-password --region $AWS_REGION \
-            | docker login --username AWS --password-stdin "$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com"
-
-      - name: Descobrir URI do repositório
-        id: repo
-        run: |
-          URI=$(aws ecr describe-repositories --repository-names "$REPO_NAME" --query 'repositories[0].repositoryUri' --output text)
-          echo "uri=$URI" >> $GITHUB_OUTPUT
-
-      - name: Build & Push da imagem
-        env:
-          REPO_URI: ${{ steps.repo.outputs.uri }}
-          GIT_SHA: ${{ github.sha }}
-        run: |
-          SHORT=${GIT_SHA::7}
-          docker build -t "$REPO_URI:$SHORT" -f infra/image/Dockerfile infra/image
-          docker push "$REPO_URI:$SHORT"
-          echo "TAG=$SHORT" >> $GITHUB_ENV
-
-      # >>> Estes são os passos a que eu me referia <<<
+      # --- Terraform primeiro: garante/cria o ECR e expõe a URI ---
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -59,11 +39,47 @@ jobs:
         working-directory: infra/image
         run: terraform init -upgrade
 
-      - name: Terraform Apply (image)
+      - name: Terraform Apply (create/ensure ECR)
+        working-directory: infra/image
+        # Se seu módulo NÃO precisa de variáveis aqui, pode ser só 'terraform apply -auto-approve'
+        run: |
+          terraform apply -auto-approve
+
+      - name: Get ECR URI from Terraform output
+        id: tfout
+        working-directory: infra/image
+        run: |
+          URI=$(terraform output -raw repository_url)
+          echo "URI=$URI" | tee -a $GITHUB_ENV
+          echo "uri=$URI" >> $GITHUB_OUTPUT
+
+      # --- Login no ECR ---
+      - name: Login no ECR
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+      # --- Build & Push ---
+      # DICA: se seu Dockerfile usa 'COPY app.py .' mas o arquivo está fora de infra/image,
+      # use contexto '.' (raiz) e mantenha o Dockerfile com -f infra/image/Dockerfile
+      - name: Build & Push da imagem
+        env:
+          REPO_URI: ${{ steps.tfout.outputs.uri }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          SHORT=${GIT_SHA::7}
+          # Se o seu Dockerfile copia arquivos que estão fora de infra/image, use contexto '.' :
+          docker build -t "$REPO_URI:$SHORT" -f infra/image/Dockerfile .
+          docker push "$REPO_URI:$SHORT"
+          echo "TAG=$SHORT" >> $GITHUB_ENV
+
+      # --- Atualiza a infra para apontar para a nova TAG ---
+      - name: Terraform Apply (update image tag)
         working-directory: infra/image
         run: |
           terraform apply \
             -auto-approve \
             -input=false \
             -lock-timeout=5m \
-            -var="image_tag=TAG"
+            -var="image_tag=${{ env.TAG }}"
