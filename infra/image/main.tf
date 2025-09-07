@@ -1,7 +1,3 @@
-terraform {
-  required_providers { aws = { source = "hashicorp/aws", version = ">= 5.0" } }
-}
-
 variable "image_tag"      { type = string }                       # passado pela esteira
 variable "lambda_role_arn"{ type = string }                       # role já existente
 
