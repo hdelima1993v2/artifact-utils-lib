@@ -30,8 +30,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       # --- Terraform primeiro: garante/cria o ECR e expõe a URI ---
-      # .github/workflows/image-lambda-ci.yml  (trecho dos steps Terraform/ECR/Build/Deploy)
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -41,54 +39,47 @@ jobs:
         working-directory: infra/image
         run: terraform init -upgrade
 
-      # (opcional) limpa lock velho, evita "ficar esperando"
-      - name: Clear stale Terraform lock (best-effort)
-        working-directory: infra/image
-        env:
-          TF_LOCK_TABLE: terraform-locks
-        run: |
-          aws dynamodb delete-item \
-            --table-name "$TF_LOCK_TABLE" \
-            --key '{"LockID":{"S":"ddd-state-terraform/artifact-lib-image/terraform.tfstate"}}' \
-            || true
-
-      # === APPLY 1: CRIAR/ASSEGURAR ECR (sem vars) ===
       - name: Terraform Apply (create/ensure ECR)
         working-directory: infra/image
-        env:
-          TF_IN_AUTOMATION: "true"
+        # Se seu módulo NÃO precisa de variáveis aqui, pode ser só 'terraform apply -auto-approve'
         run: |
-          terraform apply \
-            -auto-approve -input=false -lock-timeout=5m \
-            -target=aws_ecr_repository.lambda
+          terraform apply -auto-approve
 
       - name: Get ECR URI from Terraform output
-        id: ecr_uri
+        id: tfout
         working-directory: infra/image
         run: |
-          echo "REPO_URI=$(terraform output -raw ecr_repository_url)" >> $GITHUB_ENV
+          URI=$(terraform output -raw repository_url)
+          echo "URI=$URI" | tee -a $GITHUB_ENV
+          echo "uri=$URI" >> $GITHUB_OUTPUT
 
+      # --- Login no ECR ---
       - name: Login no ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION \
-            | docker login --username AWS --password-stdin "$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com"
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
+      # --- Build & Push ---
+      # DICA: se seu Dockerfile usa 'COPY app.py .' mas o arquivo está fora de infra/image,
+      # use contexto '.' (raiz) e mantenha o Dockerfile com -f infra/image/Dockerfile
       - name: Build & Push da imagem
         env:
-          REPO_URI: ${{ env.REPO_URI }}
+          REPO_URI: ${{ steps.tfout.outputs.uri }}
           GIT_SHA: ${{ github.sha }}
         run: |
           SHORT=${GIT_SHA::7}
-          docker build -t "$REPO_URI:$SHORT" -f infra/image/Dockerfile infra/image
+          # Se o seu Dockerfile copia arquivos que estão fora de infra/image, use contexto '.' :
+          docker build -t "$REPO_URI:$SHORT" -f infra/image/Dockerfile .
           docker push "$REPO_URI:$SHORT"
           echo "TAG=$SHORT" >> $GITHUB_ENV
 
-      # === APPLY 2: DEPLOY DA LAMBDA (só image_tag) ===
-      - name: Terraform Apply (deploy lambda image)
+      # --- Atualiza a infra para apontar para a nova TAG ---
+      - name: Terraform Apply (update image tag)
         working-directory: infra/image
-        env:
-          TF_IN_AUTOMATION: "true"
         run: |
           terraform apply \
-            -auto-approve -input=false -lock-timeout=5m \
-            -var="image_tag=${TAG}"
+            -auto-approve \
+            -input=false \
+            -lock-timeout=5m \
+            -var="image_tag=${{ env.TAG }}"
