@@ -38,6 +38,17 @@ jobs:
       - name: Terraform Init (image)
         working-directory: infra/image
         run: terraform init -upgrade
+            
+      # (opcional) limpa lock velho, evita "ficar esperando"
+      - name: Clear stale Terraform lock (best-effort)
+        working-directory: infra/image
+        env:
+          TF_LOCK_TABLE: SEU_DDB_TF_LOCK
+        run: |
+          aws dynamodb delete-item \
+            --table-name "$TF_LOCK_TABLE" \
+            --key '{"LockID":{"S":"ddd-state-terraform/artifact-lib-image/terraform.tfstate"}}' \
+            || true
 
       - name: Terraform Apply (create/ensure ECR)
         working-directory: infra/image

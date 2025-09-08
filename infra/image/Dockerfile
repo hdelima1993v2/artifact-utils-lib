@@ -9,4 +9,3 @@ COPY src/ ./
 
 # Seu handler fica em app.py -> function handler()
 CMD ["app.handler"]
- 
