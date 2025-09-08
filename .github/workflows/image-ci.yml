@@ -65,11 +65,17 @@ jobs:
             echo "No lock item found in $TF_LOCK_TABLE for $TF_LOCK_KEY"
           fi
 
+      # Terraform Apply (create/ensure ECR)
       - name: Terraform Apply (create/ensure ECR)
         working-directory: infra/image
-        # Se seu módulo NÃO precisa de variáveis aqui, pode ser só 'terraform apply -auto-approve'
+        env:
+          TF_IN_AUTOMATION: "true"
         run: |
-          terraform apply -auto-approve
+          terraform apply \
+            -auto-approve \
+            -input=false \
+            -lock-timeout=5m \
+            -target=aws_ecr_repository.lambda
 
       - name: Get ECR URI from Terraform output
         id: tfout
@@ -94,18 +100,21 @@ jobs:
           REPO_URI: ${{ steps.tfout.outputs.uri }}
           GIT_SHA: ${{ github.sha }}
         run: |
+        
           SHORT=${GIT_SHA::7}
           # Se o seu Dockerfile copia arquivos que estão fora de infra/image, use contexto '.' :
           docker build -t "$REPO_URI:$SHORT" -f infra/image/Dockerfile .
           docker push "$REPO_URI:$SHORT"
           echo "TAG=$SHORT" >> $GITHUB_ENV
 
-      # --- Atualiza a infra para apontar para a nova TAG ---
+      # Terraform Apply (update image tag)
       - name: Terraform Apply (update image tag)
         working-directory: infra/image
+        env:
+          TAG: ${{ env.TAG }}
         run: |
           terraform apply \
             -auto-approve \
             -input=false \
             -lock-timeout=5m \
-            -var="image_tag=${{ env.TAG }}"
+            -var="image_tag=${TAG}"
