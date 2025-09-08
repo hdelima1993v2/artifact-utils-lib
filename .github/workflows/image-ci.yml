@@ -43,7 +43,7 @@ jobs:
       - name: Force unlock stale Terraform lock (best-effort)
         working-directory: infra/image
         env:
-          TF_LOCK_TABLE: SEU_DDB_TF_LOCK
+          TF_LOCK_TABLE: terraform-locks
           TF_LOCK_KEY: ddd-state-terraform/artifact-lib-image/terraform.tfstate
         run: |
           set -e
