@@ -39,16 +39,31 @@ jobs:
         working-directory: infra/image
         run: terraform init -upgrade
             
-      # (opcional) limpa lock velho, evita "ficar esperando"
-      - name: Clear stale Terraform lock (best-effort)
+      # tenta liberar lock preso no DDB antes de aplicar
+      - name: Force unlock stale Terraform lock (best-effort)
         working-directory: infra/image
         env:
           TF_LOCK_TABLE: SEU_DDB_TF_LOCK
+          TF_LOCK_KEY: ddd-state-terraform/artifact-lib-image/terraform.tfstate
         run: |
-          aws dynamodb delete-item \
+          set -e
+          # jq geralmente já existe no runner; se quiser garantir, descomente:
+          # sudo apt-get update && sudo apt-get install -y jq
+
+          ITEM_JSON=$(aws dynamodb get-item \
             --table-name "$TF_LOCK_TABLE" \
-            --key '{"LockID":{"S":"ddd-state-terraform/artifact-lib-image/terraform.tfstate"}}' \
-            || true
+            --key "{\"LockID\":{\"S\":\"$TF_LOCK_KEY\"}}")
+
+          INFO=$(echo "$ITEM_JSON" | jq -r '.Item.Info.S // empty')
+          if [ -n "$INFO" ]; then
+            LOCK_ID=$(echo "$INFO" | jq -r '.ID // empty')
+            if [ -n "$LOCK_ID" ]; then
+              echo "Found stale lock id: $LOCK_ID — forcing unlock"
+              terraform force-unlock -force "$LOCK_ID" || true
+            fi
+          else
+            echo "No lock item found in $TF_LOCK_TABLE for $TF_LOCK_KEY"
+          fi
 
       - name: Terraform Apply (create/ensure ECR)
         working-directory: infra/image
